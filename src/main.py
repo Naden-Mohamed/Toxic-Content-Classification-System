@@ -1,8 +1,8 @@
 import pandas as pd
-from config import Config
-from text_preprocessing import TextPreprocessor
+from src.config import Config
+from src.text_preprocessing import TextPreprocessor
 from sklearn.model_selection import train_test_split
-from toxicity_classifier import Vocabulary, ToxicDataset, BRNN, Trainer, Evaluator, ToxicityPipeline
+from src.toxicity_classifier import Vocabulary, ToxicDataset, BRNN, Trainer, Evaluator, ToxicityPipeline
 from pathlib import Path
  
 import torch
