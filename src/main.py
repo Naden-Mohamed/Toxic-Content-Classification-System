@@ -14,10 +14,10 @@ import json
 def main():
     config = Config()
     Path(config.RESULTS_DIR).mkdir(exist_ok=True)
-    print(f"[Config] Device: {config.DEVICE}")
+    print(f"Device: {config.DEVICE}")
 
     print("\nLoading & preprocessing data …")
-    df = pd.read_excel("/content/NLP_Neurova_toxic_content_classification.xlsx")
+    df = pd.read_excel("/dataset/NLP_Neurova_toxic_content_classification.xlsx")
     print(f"  Dataset size : {len(df):,}")
     print(f"  Label distribution:\n{df['Toxic Category'].value_counts().to_string()}")
     le = LabelEncoder()
