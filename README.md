@@ -24,7 +24,7 @@ The system classifies content into the following categories:
 
 ---
 
-## 🚀 Features
+##  Features
 
 -  Detects multiple types of toxic content
 - Built using Natural Language Processing (NLP)
@@ -50,22 +50,6 @@ The system classifies content into the following categories:
   - Embeddings
 ---
 
-## 📂 Project Structure
-Toxic-Content-Classification-System/
-│
-├── dataset/ 
-├── results/
-├── models/ # Saved models
-├── src/  
-│ ├── text_preprocessing.py
-│ ├── toxicity_classifier.py
-│ ├── config.py
-│ ├── requirements.txt
-│ └── main.py
-│
-└── README.md
-
-
 ## Installation
 
 1. Clone the repository:
@@ -75,13 +59,17 @@ git clone https://github.com/Naden-Mohamed/Toxic-Content-Classification-System.g
 cd Toxic-Content-Classification-System
 ```
 2. Install dependencies:
-``` pip install -r requirements.txt ```
-3. Train & Evaluate the model
-``` python src/main.py ```
+```bash
+ pip install -r requirements.txt
+ ```
+4. Train & Evaluate the model
+```bash
+ python src/main.py
+ ```
 
 ## Model Performance
 
-# Evaluation metrics:
+Evaluation metrics:
 - Accuracy
 - Precision / Recall
 - F1 Score
