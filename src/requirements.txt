@@ -3,5 +3,6 @@ requests==2.33.1
 pandas==3.0.2
 nltk==3.9.4
 scikit-learn==1.8.0
-matplotlib==3.10.8
-seaborn==0.13.2
+transformers==5.7.0
+streamlit==1.57.0
+

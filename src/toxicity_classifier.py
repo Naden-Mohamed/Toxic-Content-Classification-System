@@ -3,8 +3,7 @@ import torch.nn as nn
 import pickle
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 from collections import Counter
 from nltk.tokenize import word_tokenize
 
@@ -14,6 +13,7 @@ from torch.utils.data import Dataset, DataLoader
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from pathlib import Path
+from typing import Any, cast
 
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score,
@@ -22,6 +22,12 @@ from sklearn.metrics import (
 from collections import Counter
 import nltk
 from nltk.corpus import stopwords
+from config import Config
+from text_preprocessing import TextPreprocessor
+from pathlib import Path
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import json
 
 nltk.download('punkt')
 nltk.download('punkt_tab')
@@ -86,7 +92,7 @@ class Vocabulary:
         tokens = word_tokenize(text.lower())
         return [w for w in tokens if w not in self.stopwords]
 
-    def pad_sequences(indices: list[int], max_len: int, pad_idx: int = 0) -> list[int]:
+    def pad_sequences(self, indices: list[int], max_len: int, pad_idx: int = 0) -> list[int]:
 
         if len(indices) >= max_len:
             return indices[:max_len]
@@ -98,13 +104,13 @@ class ToxicDataset(Dataset):
         self.vocab = vocab
         self.max_len = max_len
         self.preprocessor = preprocessor
-
+        
         self.encoded = []
         for text in texts:
             cleaned_text = preprocessor.clean_text(text)
             tokens = vocab.tokenization(cleaned_text)
             ids = self.vocab.encode(tokens)
-            padded_text = Vocabulary.pad_sequences(ids, self.max_len)
+            padded_text = self.vocab.pad_sequences(indices= ids, max_len = self.max_len)
             self.encoded.append(padded_text)
 
         self.labels = list(labels)
@@ -258,9 +264,8 @@ class Trainer:
 
 
 class Evaluator:
-
-    def __init__(self, model, config: Config):
-        self.model  = model
+    def __init__(self, model, config):
+        self.model = model
         self.config = config
         self.device = config.DEVICE
 
@@ -275,16 +280,15 @@ class Evaluator:
             for x, y in loader:
                 x = x.to(self.device)
                 logits = self.model(x)
-                probs  = torch.sigmoid(logits).cpu().numpy()
-                preds  = logits.argmax(dim=1).cpu().numpy()
+                preds = logits.argmax(dim=1).cpu().numpy()
                 all_preds.extend(preds.tolist())
                 all_labels.extend(y.numpy().astype(int).tolist())
 
         results = {
-            "accuracy":  accuracy_score(all_labels, all_preds),
+            "accuracy": accuracy_score(all_labels, all_preds),
             "precision": precision_score(all_labels, all_preds, average="weighted", zero_division=0),
-            "recall":    recall_score(all_labels, all_preds,    average="weighted", zero_division=0),
-            "f1":        f1_score(all_labels, all_preds,        average="weighted", zero_division=0),
+            "recall": recall_score(all_labels, all_preds, average="weighted", zero_division=0),
+            "f1": f1_score(all_labels, all_preds, average="weighted", zero_division=0),
         }
 
         print("\n" + "="*50)
@@ -292,33 +296,39 @@ class Evaluator:
         print("="*50)
         for k, v in results.items():
             print(f"  {k.capitalize():12s}: {v:.4f}")
-        print("\n" + classification_report(
-            all_labels, all_preds, target_names=["Safe","Violent Crimes","Elections","Sex-Related Crimes","unsafe","Non-Violent Crimes","Child Sexual Exploitation","Unknown S-Type", "Toxic"]
-        ))
+        
+        report = classification_report(
+            all_labels, all_preds, 
+            target_names=["Safe","Violent Crimes","Elections","Sex-Related Crimes","unsafe","Non-Violent Crimes","Child Sexual Exploitation","Unknown S-Type", "Toxic"]
+        )
+        print(report)
 
+        # Save Confusion Matrix as a Text File instead of an image
         cm = confusion_matrix(all_labels, all_preds)
-        self._plot_cm(cm)
+        cm_path = f"{self.config.RESULTS_DIR}/confusion_matrix.txt"
+        np.savetxt(cm_path, cm, fmt='%d', delimiter='\t')
+        print(f"Evaluation done. Confusion matrix saved as text to {cm_path}")
 
         results["confusion_matrix"] = cm.tolist()
         return results
 
-    @staticmethod
-    def _plot_cm(cm: np.ndarray) -> None:
-        Path(Config.RESULTS_DIR).mkdir(exist_ok=True)
-        fig, ax = plt.subplots(figsize=(6, 5))
-        sns.heatmap(
-            cm, annot=True, fmt="d", cmap="Blues", ax=ax,
-            xticklabels=["Non-Toxic", "Toxic"],
-            yticklabels=["Non-Toxic", "Toxic"],
-        )
-        ax.set_xlabel("Predicted")
-        ax.set_ylabel("Actual")
-        ax.set_title("Confusion Matrix")
-        plt.tight_layout()
-        path = f"{Config.RESULTS_DIR}/confusion_matrix.png"
-        plt.savefig(path)
-        plt.close()
-        print(f"Evalation done, Confusion matrix saved to {path}")
+    # @staticmethod
+    # def _plot_cm(cm: np.ndarray) -> None:
+    #     Path(Config.RESULTS_DIR).mkdir(exist_ok=True)
+    #     fig, ax = plt.subplots(figsize=(6, 5))
+    #     sns.heatmap(
+    #         cm, annot=True, fmt="d", cmap="Blues", ax=ax,
+    #         xticklabels=["Non-Toxic", "Toxic"],
+    #         yticklabels=["Non-Toxic", "Toxic"],
+    #     )
+    #     ax.set_xlabel("Predicted")
+    #     ax.set_ylabel("Actual")
+    #     ax.set_title("Confusion Matrix")
+    #     plt.tight_layout()
+    #     path = f"{Config.RESULTS_DIR}/confusion_matrix.png"
+    #     plt.savefig(path)
+    #     plt.close()
+    #     print(f"Evalation done, Confusion matrix saved to {path}")
 
 
 
@@ -382,29 +392,86 @@ class ToxicityPipeline:
         model.load_state_dict(
             torch.load(model_path, map_location=config.DEVICE)
         )
-        print(f"[Pipeline] Model loaded from {model_path}")
+        print(f"Model loaded from {model_path}")
         return cls(model, vocab, config)
 
 
+    @staticmethod
     def plot_training_history(history: dict, results_dir: str = "results") -> None:
-        """Plot loss and accuracy curves side by side."""
+        """Saves training history to CSV instead of plotting to avoid matplotlib issues."""
         Path(results_dir).mkdir(exist_ok=True)
-        fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+        
+        df_history = pd.DataFrame(history)
+        csv_path = f"{results_dir}/training_history.csv"
+        df_history.to_csv(csv_path, index_label="epoch")
+        
+        print(f"[Log] Training history saved to {csv_path}")
+        print("You can open this file in Excel to visualize your Loss and Accuracy.")
 
-        for ax, metric, title in zip(
-            axes,
-            [("train_loss", "val_loss"), ("train_acc", "val_acc")],
-            ["Loss", "Accuracy"],
-        ):
-            ax.plot(history[metric[0]], label="Train", marker="o")
-            ax.plot(history[metric[1]], label="Val",   marker="s")
-            ax.set_title(title)
-            ax.set_xlabel("Epoch")
-            ax.legend()
-            ax.grid(alpha=0.3)
+class FullPipeline:
+    def __init__(self) -> None:
+        self.config = Config()
+        self.df = TextPreprocessor.handle_dataset()
+        Path(self.config.RESULTS_DIR).mkdir(exist_ok=True)
+        print(f"[Config] Device: {self.config.DEVICE}")
 
-        plt.tight_layout()
-        path = f"{results_dir}/training_curves.png"
-        plt.savefig(path)
-        plt.close()
-        print(f"[Plot] Training curves saved to {path}")
+    def run_pipeline(self):
+        df = self.df
+        le = LabelEncoder()
+        label_array = cast(np.ndarray, le.fit_transform(df["label"]))
+        df["label"] = label_array.tolist()
+
+        preprocessor = TextPreprocessor()
+        clean_texts = cast(np.ndarray, preprocessor.clean_batch(df["text_content"]))
+        df["clean_text"] = clean_texts.tolist()
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            df["clean_text"].tolist(),
+            df["label"].tolist(),
+            test_size   = self.config.TEST_SIZE,
+            random_state= self.config.RANDOM_SEED,
+            stratify    = df["label"],
+        )
+        print(f"  Train: {len(X_train):,}  |  Test: {len(X_test):,}")
+
+        print("\n Building vocabulary …")
+        vocab = Vocabulary(max_size=self.config.MAX_VOCAB_SIZE, min_freq=self.config.MIN_WORD_FREQ)
+        vocab.build([vocab.tokenization(t) for t in X_train])
+        vocab.save(self.config.VOCAB_PATH)
+
+        print("\n Creating datasets …")
+        train_ds = ToxicDataset(X_train, y_train, vocab, self.config.MAX_SEQ_LEN, preprocessor)
+        test_ds  = ToxicDataset(X_test,  y_test,  vocab, self.config.MAX_SEQ_LEN, preprocessor)
+
+        train_loader = DataLoader(train_ds, batch_size=self.config.BATCH_SIZE, shuffle=True,  drop_last=True)
+        test_loader  = DataLoader(test_ds,  batch_size=self.config.BATCH_SIZE, shuffle=False)
+
+        NUM_CLASSES = df["label"].nunique()
+
+        print("\n Building model …")
+        model = BRNN(
+            vocab_size    = len(vocab),
+            embedding_dim = self.config.EMBEDDING_DIM,
+            hidden_dim    = self.config.HIDDEN_DIM,
+            output_dim    = NUM_CLASSES,
+            num_layers    = self.config.NUM_LAYERS,
+            dropout       = self.config.DROPOUT,
+            bidirectional = self.config.BIDIRECTIONAL,
+        )
+        n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"  Trainable parameters: {n_params:,}")
+        print(model)
+
+        print("\nTraining …")
+        trainer = Trainer(model, self.config)
+        trainer.train(train_loader, test_loader)
+        ToxicityPipeline.plot_training_history(trainer.history, self.config.RESULTS_DIR)
+
+        print("\n Evaluating …")
+        evaluator = Evaluator(model, self.config)
+        results   = evaluator.evaluate(test_loader)
+
+        results_path = f"{self.config.RESULTS_DIR}/metrics.json"
+        with open(results_path, "w") as f:
+            json.dump({k: v for k, v in results.items() if k != "confusion_matrix"}, f, indent=2)
+        print(f"[Eval] Metrics saved to {results_path}")

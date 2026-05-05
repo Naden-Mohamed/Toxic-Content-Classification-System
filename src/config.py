@@ -15,13 +15,16 @@ class Config:
     BIDIRECTIONAL    = True     
  
     BATCH_SIZE       = 64
-    EPOCHS           = 10
+    EPOCHS           = 15
     LEARNING_RATE    = 1e-3
     WEIGHT_DECAY     = 1e-5     # L2 regularisation on weights
  
+    DATASET_PATH = "../dataset/NLP_Neurova_toxic_content_classification.xlsx"
     MODEL_PATH       = "saved_model.pt"
     VOCAB_PATH       = "vocab.pkl"
     RESULTS_DIR      = "results"
+
+    PRETRAINED_CAPTIONING_MODEL = "norwoodsystems/image-caption"
  
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
  
