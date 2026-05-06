@@ -1,4 +1,8 @@
 import torch
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
 
@@ -27,5 +31,12 @@ class Config:
     PRETRAINED_CAPTIONING_MODEL = "norwoodsystems/image-caption"
  
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+    MONGODB_URI = os.getenv("MONGODB_CONNECTION_STRING")
+    DATABASE_NAME = os.getenv("DATABASE_NAME")
+    COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+
+    CSV_PATH = "data/toxic_logs.csv"
  
  

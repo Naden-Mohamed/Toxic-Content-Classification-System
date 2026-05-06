@@ -5,4 +5,10 @@ nltk==3.9.4
 scikit-learn==1.8.0
 transformers==5.7.0
 streamlit==1.57.0
+pymongo==4.17.0
+dnspython==2.8.0
+python-dotenv==1.2.2
+
+
+
 
