@@ -1,39 +1,109 @@
 # Toxic Content Classification System
 
-A machine learning-based system for detecting and classifying toxic text.  
-This project aims to improve digital conversations by automatically identifying harmful or offensive language.
+A comprehensive AI system for **toxic content classification, image captioning, transformer fine-tuning, and content moderation**, combining deep learning and modern LLM-based techniques into a single production-ready pipeline to detect different types of toxicity in user-generated tex.
 
 ---
 
 ##  Overview
+This project consists of four major components:
 
-Online platforms often struggle with toxic comments such as insults, threats, and hate speech.  
-This project builds a **multi-label classification model** that detects different types of toxicity in user-generated text.
+1. **Toxic Text Classification (LSTM)**
+2. **Multimodal Image Captioning (BLIP)**
+3. **Parameter-Efficient Fine-Tuning (LoRA + DistilBERT)**
+4. **Content Moderation using Llama Guard (Zero-Shot)**
 
-The system classifies content into the following categories:
+The system is deployed using **Streamlit**, uses a **Mongodb database** for logging inputs and outputs and **W&B** to track models training.
 
-- Toxic
-- Safe
-- Violent Crimes
-- Elections
-- Sex-Related Crimes
-- unsafe
-- Non-Violent Crimes
-- Child Sexual Exploitation
-- Unknown S-Type
+---
+## This project was divided into 3 related tasks:
+
+### Task 1: Toxic Content Classification (LSTM)
+
+#### Features:
+- Text preprocessing (cleaning, tokenization, padding)
+- Word embeddings
+- LSTM-based sequence modeling
+- Optional Bidirectional LSTM + Dropout
+
+#### Pipeline:
+1. Input text
+2. Preprocessing
+3. Tokenization & encoding
+4. Model inference
+5. Prediction output
+
+#### Evaluation Metrics:
+- Accuracy
+- Precision
+- Recall
+- F1-score
+- Confusion Matrix
 
 ---
 
-##  Features
+### Task 2: Image Captioning System
 
--  Detects multiple types of toxic content
-- Built using Natural Language Processing (NLP)
--  Multi-label classification model using BiLSTM
--  Scalable for real-world moderation systems
--  Clean and modular project structure
+#### Requirements:
+- Implemented in `imagecaption.py`
+- Uses BLIP model
+- Integrated into main application
+
+#### Features:
+- Accepts image input
+- Generates captions
+- Stores results in Mongodb Atlas database
+
+#### Database Stores:
+- User text OR image caption
+- Classification result
 
 ---
 
+### Task 3: Fine-Tuning DistilBERT with LoRA
+
+#### Key Concepts:
+- Parameter-Efficient Fine-Tuning (PEFT)
+- Low-Rank Adaptation (LoRA)
+- Reduced training cost and memory usage
+
+#### Implementation:
+- Tokenization using DistilBERT tokenizer
+- LoRA applied to attention layers
+- Training + validation pipeline
+
+#### Outputs:
+- Fine-tuned LoRA weights
+- Model evaluation results
+- Inference on custom inputs
+
+#### Metrics:
+- Accuracy
+- Precision
+- Recall
+- F1-score
+
+---
+
+### Task 4: Content Moderation using Llama Guard
+
+#### Key Idea:
+- Zero-shot moderation (no fine-tuning)
+- Prompt-engineered classification
+
+#### Features:
+- Detects:
+  - Toxic content
+  - Harmful language
+  - Policy violations
+- Structured prompt design
+- Output parsing
+
+#### Focus:
+- Prompt engineering
+- Safety-aware AI systems
+- Real-world moderation workflows
+
+---
 ##  Tech Stack
 
 - **Programming Language:** Python
@@ -60,16 +130,10 @@ cd Toxic-Content-Classification-System
 ```
 2. Install dependencies:
 ```bash
+ cd src
  pip install -r requirements.txt
  ```
-4. Train & Evaluate the model
+3. Run streamlit
 ```bash
- python src/main.py
+ streamlit run src/main.py
  ```
-
-## Model Performance
-
-Evaluation metrics:
-- Accuracy
-- Precision / Recall
-- F1 Score
