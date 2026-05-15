@@ -1,54 +1,66 @@
 import re
-import string
-from config import Config
 import pandas as pd 
 
-config = Config()
-
 class TextPreprocessor:
-    dataset = pd.read_excel(config.DATASET_PATH)
-    SPACE_RE = re.compile(r"\s+")
-    NONWORD_RE= re.compile(r"[^a-z0-9\s]")
-    
-    @classmethod
-    def handle_dataset(cls):
-        print("\nLoading & preprocessing data …")
-        print(f"  Dataset size : {len(cls.dataset):,}")
-        print(f"  Label distribution:\n{cls.dataset['Toxic Category'].value_counts().to_string()}")
+    CLEAN_RE = re.compile(r"[^a-z0-9]+")
 
-        query_df = cls.dataset[['query', 'Toxic Category']].copy().dropna()
-        query_df.columns = ['text_content', 'label'] 
+    def __init__(self, dataset_path: str):
+        self.dataset_path = dataset_path
+        self._dataset = None
+        self._processed_df = None
 
-        desc_df = cls.dataset[['image descriptions', 'Toxic Category']].copy().dropna()
-        desc_df.columns = ['text_content', 'label']
+    def load_dataset(self):
+        if self._dataset is None:
+            try:
+                self._dataset = pd.read_excel(self.dataset_path)
+            except Exception as e:
+                raise RuntimeError(f"Failed to load dataset: {e}")
+        return self._dataset
 
-        df = pd.concat([query_df, desc_df], ignore_index=True)
+    def handle_dataset(self):
+        if self._processed_df is not None:
+            return self._processed_df
 
-        print(df.head())
-        print(f"Total training examples: {len(df)}")
-        return df
+        df = self.load_dataset()
 
-    def get_data_info(self,df):
+        query_df = df[['query', 'Toxic Category']].dropna().copy()
+        query_df.columns = ['text_content', 'labels']
 
-        return {
-            "dataset name": config.DATASET_PATH,
-            "dataset size": df.size,
-            "columns": df.columns,
-            "num of empty rows ": df.isnull().sum()
-        }
-    @classmethod
-    def clean_text(cls, text:str)->str:
+        desc_df = df[['image descriptions', 'Toxic Category']].dropna().copy()
+        desc_df = (
+              desc_df.groupby('image descriptions')['Toxic Category']
+              .agg(lambda x: x.mode()[0])
+              .reset_index()
+          )
+        desc_df.columns = ['text_content', 'labels']
 
-        if not isinstance(text,str):
+        combined_df = pd.concat([query_df, desc_df], ignore_index=True)
+        self._processed_df = combined_df
+        return combined_df
+
+    def clean_text(self, text: str) -> str:
+        if not isinstance(text, str):
             return ""
 
         text = text.lower()
-        text = text.translate(str.maketrans('', '', string.punctuation))
-        text = cls.SPACE_RE.sub(" ", text)
-        text = cls.NONWORD_RE.sub(" ", text)
+        text = self.CLEAN_RE.sub(" ", text)
         return text.strip()
 
+    def clean_batch(self):
+        df = self.handle_dataset()
+        df.drop_duplicates(inplace=True)
 
-    @classmethod
-    def clean_batch(cls, texts) -> list:
-        return [cls.clean_text(t) for t in texts]
+        df = df.copy()
+        df['text_content'] = df['text_content'].apply(self.clean_text)
+        return df
+
+    def get_data_info(self):
+        df = self.handle_dataset()
+
+        info = {
+            "dataset_size": len(df),
+            "label_distribution": df['labels'].value_counts().to_dict(),
+            "missing_values": df.isnull().sum().to_dict()
+        }
+
+        return info

@@ -348,7 +348,7 @@ class ToxicityPipeline:
         self.vocab        = vocab
         self.config       = config
         self.device       = config.DEVICE
-        self.preprocessor = TextPreprocessor()
+        self.preprocessor = TextPreprocessor(dataset_path=self.config.DATASET_PATH)
 
     def predict(self, text: str) -> dict:
         self.model.eval()
@@ -411,7 +411,8 @@ class ToxicityPipeline:
 class FullPipeline:
     def __init__(self) -> None:
         self.config = Config()
-        self.df = TextPreprocessor.handle_dataset()
+        self.preprocessor = TextPreprocessor(dataset_path=self.config.DATASET_PATH)
+        self.df = self.preprocessor .handle_dataset()
         Path(self.config.RESULTS_DIR).mkdir(exist_ok=True)
         print(f"[Config] Device: {self.config.DEVICE}")
 
@@ -421,8 +422,7 @@ class FullPipeline:
         label_array = cast(np.ndarray, le.fit_transform(df["label"]))
         df["label"] = label_array.tolist()
 
-        preprocessor = TextPreprocessor()
-        clean_texts = cast(np.ndarray, preprocessor.clean_batch(df["text_content"]))
+        clean_texts = cast(np.ndarray, self.preprocessor.clean_batch())
         df["clean_text"] = clean_texts.tolist()
 
         X_train, X_test, y_train, y_test = train_test_split(
@@ -440,8 +440,8 @@ class FullPipeline:
         vocab.save(self.config.VOCAB_PATH)
 
         print("\n Creating datasets …")
-        train_ds = ToxicDataset(X_train, y_train, vocab, self.config.MAX_SEQ_LEN, preprocessor)
-        test_ds  = ToxicDataset(X_test,  y_test,  vocab, self.config.MAX_SEQ_LEN, preprocessor)
+        train_ds = ToxicDataset(X_train, y_train, vocab, self.config.MAX_SEQ_LEN, self.preprocessor )
+        test_ds  = ToxicDataset(X_test,  y_test,  vocab, self.config.MAX_SEQ_LEN, self.preprocessor )
 
         train_loader = DataLoader(train_ds, batch_size=self.config.BATCH_SIZE, shuffle=True,  drop_last=True)
         test_loader  = DataLoader(test_ds,  batch_size=self.config.BATCH_SIZE, shuffle=False)
