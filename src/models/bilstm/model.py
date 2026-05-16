@@ -22,7 +22,7 @@ from sklearn.metrics import (
 from collections import Counter
 import nltk
 from nltk.corpus import stopwords
-from config import Config
+from configs.config import Config
 from text_preprocessing import TextPreprocessor
 from pathlib import Path
 from sklearn.model_selection import train_test_split

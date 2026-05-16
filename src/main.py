@@ -1,5 +1,5 @@
-from config import Config
-from imagecaption import ImageCaptioning
+from configs.config import Config
+from imagecaption.imagecaption import ImageCaptioning
 from toxicity_classifier import ToxicityPipeline
 import streamlit as st
 from PIL import Image
